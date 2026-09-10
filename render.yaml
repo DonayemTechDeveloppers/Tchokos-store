@@ -1,0 +1,166 @@
+# Blueprint Render (Infrastructure as Code) pour un environnement de TEST du
+# backend Laravel de Tchokos SARL — entièrement sur les plans gratuits Render.
+# Déploiement : dashboard Render → New → Blueprint → sélectionner ce dépôt.
+# Doc : https://render.com/docs/blueprint-spec
+#
+# Le service web est un déploiement Docker (Render n'a pas de runtime PHP natif) —
+# voir backend/Dockerfile. La base de données est PostgreSQL managée (Render ne
+# propose pas de MySQL managé) : les migrations Laravel de ce projet n'utilisent
+# pas de syntaxe MySQL brute, la conversion mysql → pgsql (DB_CONNECTION=pgsql)
+# est donc sans risque.
+#
+# Limites du tout-gratuit (acceptables pour du test, pas pour de la prod réelle) :
+# - Le service web "free" se met en veille après 15 min d'inactivité → premier
+#   appel suivant lent (cold start, plusieurs dizaines de secondes).
+# - La base "free" tchokos-db expire après 30 jours, puis est SUPPRIMÉE (avec ses
+#   données) après 14 jours de grâce si elle n'est pas passée sur un plan payant.
+#   Pour prolonger un environnement de test, recréer le blueprint (nouvelle base).
+# - Pas de worker de queue (QUEUE_CONNECTION=database) : les jobs (e-mails, push)
+#   s'accumulent sans être traités tant qu'aucun `php artisan queue:work` ne tourne.
+#   Un Background Worker Render n'existe pas sur le plan gratuit.
+
+services:
+  - type: web
+    name: tchokos-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: frankfurt
+    healthCheckPath: /up
+    autoDeployTrigger: commit
+    envVars:
+      - key: APP_NAME
+        value: "Tchokos SARL"
+      - key: APP_ENV
+        value: staging
+      # Environnement de test : les erreurs détaillées sont utiles ici. Repasser
+      # à "false" si cette URL devient accessible à des personnes autres que l'équipe.
+      - key: APP_DEBUG
+        value: "true"
+      - key: APP_TIMEZONE
+        value: UTC
+      - key: APP_LOCALE
+        value: fr
+      - key: APP_FALLBACK_LOCALE
+        value: en
+      # Générer avec `php artisan key:generate --show` et coller (avec le préfixe base64:).
+      - key: APP_KEY
+        sync: false
+      # URL publique assignée par Render au premier déploiement (https://tchokos-backend.onrender.com),
+      # à reporter ici une fois connue.
+      - key: APP_URL
+        sync: false
+      # URL du frontend Next.js déployé (Vercel ou autre) — utilisée par config/cors.php.
+      - key: FRONTEND_URL
+        sync: false
+
+      - key: LOG_CHANNEL
+        value: stack
+      # "stderr" est nécessaire pour voir les erreurs dans les logs Render (storage/laravel.log
+      # n'est pas consultable depuis le dashboard).
+      - key: LOG_STACK
+        value: single,stderr
+      - key: LOG_LEVEL
+        value: debug
+
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: tchokos-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: tchokos-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: tchokos-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: tchokos-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: tchokos-db
+          property: password
+
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_LIFETIME
+        value: "120"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: FILESYSTEM_DISK
+        value: local
+
+      # Compte admin Filament (/admin), créé/mis à jour au démarrage par `php artisan admin:ensure`.
+      - key: ADMIN_NAME
+        value: "Admin Tchokos"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+      # Secret partagé avec le frontend (app/api/revalidate) — même valeur des deux côtés.
+      - key: REVALIDATE_SECRET
+        sync: false
+
+      - key: WHATSAPP_PHONE_NUMBER
+        sync: false
+      - key: WHATSAPP_BUSINESS_API_TOKEN
+        sync: false
+      - key: WHATSAPP_BUSINESS_PHONE_ID
+        sync: false
+
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_FROM_ADDRESS
+        value: "contact@tchokos.com"
+      - key: MAIL_FROM_NAME
+        value: "Tchokos SARL"
+
+      - key: VAPID_SUBJECT
+        value: "mailto:contact@tchokos.com"
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+
+      - key: ORANGE_MONEY_MERCHANT_KEY
+        sync: false
+      - key: ORANGE_MONEY_API_USERNAME
+        sync: false
+      - key: ORANGE_MONEY_API_PASSWORD
+        sync: false
+      - key: MTN_MOMO_API_USER
+        sync: false
+      - key: MTN_MOMO_API_KEY
+        sync: false
+      - key: MTN_MOMO_SUBSCRIPTION_KEY
+        sync: false
+      - key: SANDBOX_PAYMENT_WEBHOOK_SECRET
+        sync: false
+
+databases:
+  - name: tchokos-db
+    databaseName: tchokos
+    user: tchokos
+    plan: free # ⚠️ expire après 30 jours — voir avertissement en tête de fichier
+    region: frankfurt
