@@ -100,6 +100,27 @@ services:
       - key: FILESYSTEM_DISK
         value: local
 
+      # Stockage médias externe (Cloudflare R2 recommandé, gratuit — voir
+      # backend/.env.example). Indispensable : le disque du conteneur Render
+      # est effacé à chaque redémarrage (redéploiement ou réveil du plan
+      # gratuit), donc sans ceci, toute image/vidéo uploadée finit par 404.
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_DEFAULT_REGION
+        value: auto
+      - key: AWS_BUCKET
+        sync: false
+      # Cloudflare R2 : https://<account_id>.r2.cloudflarestorage.com
+      - key: AWS_ENDPOINT
+        sync: false
+      # URL publique du bucket (domaine r2.dev activé sur le bucket, ou domaine personnalisé).
+      - key: AWS_URL
+        sync: false
+      - key: AWS_USE_PATH_STYLE_ENDPOINT
+        value: "true"
+
       # Compte admin Filament (/admin), créé/mis à jour au démarrage par `php artisan admin:ensure`.
       - key: ADMIN_NAME
         value: "Admin Tchokos"

@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Media;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CatalogBrowsingTest extends TestCase
@@ -68,7 +69,7 @@ class CatalogBrowsingTest extends TestCase
         $listing->assertOk();
         $entry = collect($listing->json('data'))->firstWhere('slug', $product->slug);
         $this->assertNotNull($entry, 'Product with only a video should appear in the catalog listing.');
-        $this->assertSame('produits/posters/reel.jpg', $entry['primary_image']);
+        $this->assertSame(Storage::disk('public')->url('produits/posters/reel.jpg'), $entry['primary_image']);
     }
 
     public function test_product_without_any_media_returns_404(): void

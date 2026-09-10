@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -87,7 +88,9 @@ class Product extends Model
      */
     public function primaryVisualUrl(): ?string
     {
-        return $this->primaryImage?->url ?? $this->primaryVideo?->poster_url;
+        $path = $this->primaryImage?->url ?? $this->primaryVideo?->poster_url;
+
+        return $path ? Storage::disk('public')->url($path) : null;
     }
 
     /**
