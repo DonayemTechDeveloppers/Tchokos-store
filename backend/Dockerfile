@@ -24,6 +24,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gd \
     && rm -rf /var/lib/apt/lists/*
 
+# Les formulaires Filament (upload de vidéos "reel") attendent jusqu'à ~37 Mo —
+# bien au-delà des valeurs par défaut de PHP sans php.ini (upload_max_filesize=2M).
+COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
 WORKDIR /var/www/html
 
 # Couche mise en cache séparément : les dépendances ne sont réinstallées que si
