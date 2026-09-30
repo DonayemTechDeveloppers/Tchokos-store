@@ -5,6 +5,20 @@ const backendOrigin = new URL(
   (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api").replace(/\/api\/?$/, "")
 );
 
+// Hôte public du stockage médias (Cloudflare R2), ex. https://pub-xxxx.r2.dev
+// ou https://media.mondomaine.com — à définir dans NEXT_PUBLIC_MEDIA_URL.
+const mediaPatterns = [];
+try {
+  if (process.env.NEXT_PUBLIC_MEDIA_URL) {
+    const m = new URL(process.env.NEXT_PUBLIC_MEDIA_URL);
+    mediaPatterns.push({
+      protocol: m.protocol.replace(":", ""),
+      hostname: m.hostname,
+      ...(m.port ? { port: m.port } : {}),
+    });
+  }
+} catch {}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -20,6 +34,7 @@ const nextConfig = {
         hostname: backendOrigin.hostname,
         ...(backendOrigin.port ? { port: backendOrigin.port } : {}),
       },
+      ...mediaPatterns,
     ],
     dangerouslyAllowSVG: true,
     // Le backend Laravel tourne sur localhost:8000 en dev (cf. remotePatterns
