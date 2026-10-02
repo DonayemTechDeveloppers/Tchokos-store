@@ -33,11 +33,10 @@ WORKDIR /var/www/html
 # Couche mise en cache séparément : les dépendances ne sont réinstallées que si
 # composer.json/composer.lock changent, pas à chaque modification du code.
 COPY composer.json composer.lock ./
-# Pilote S3/Cloudflare R2 pour le disque "public" (voir config/filesystems.php).
-RUN composer require league/flysystem-aws-s3-v3:^3.0 --no-install --no-scripts --no-interaction --no-progress
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
 
 COPY . .
+RUN composer require league/flysystem-aws-s3-v3:^3.0 --update-no-dev --no-scripts --no-interaction --no-progress
 RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
 
 ENV APP_ENV=production
