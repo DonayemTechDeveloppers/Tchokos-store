@@ -34,6 +34,9 @@ const nextConfig = {
         hostname: backendOrigin.hostname,
         ...(backendOrigin.port ? { port: backendOrigin.port } : {}),
       },
+      // Stockage médias Supabase (écrit en dur : ne dépend pas d'une variable
+      // d'environnement présente au moment du build).
+      { protocol: "https", hostname: "ojwxlmvwzumbggolsbdk.supabase.co" },
       ...mediaPatterns,
     ],
     dangerouslyAllowSVG: true,
