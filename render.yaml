@@ -4,17 +4,15 @@
 # Doc : https://render.com/docs/blueprint-spec
 #
 # Le service web est un déploiement Docker (Render n'a pas de runtime PHP natif) —
-# voir backend/Dockerfile. La base de données est PostgreSQL managée (Render ne
-# propose pas de MySQL managé) : les migrations Laravel de ce projet n'utilisent
-# pas de syntaxe MySQL brute, la conversion mysql → pgsql (DB_CONNECTION=pgsql)
-# est donc sans risque.
+# voir backend/Dockerfile. La base de données est un PostgreSQL hébergé sur
+# Supabase (plan gratuit, sans expiration à 30 jours) : les identifiants DB_* se
+# renseignent dans le dashboard Render (sync: false).
 #
 # Limites du tout-gratuit (acceptables pour du test, pas pour de la prod réelle) :
 # - Le service web "free" se met en veille après 15 min d'inactivité → premier
 #   appel suivant lent (cold start, plusieurs dizaines de secondes).
-# - La base "free" tchokos-db expire après 30 jours, puis est SUPPRIMÉE (avec ses
-#   données) après 14 jours de grâce si elle n'est pas passée sur un plan payant.
-#   Pour prolonger un environnement de test, recréer le blueprint (nouvelle base).
+# - Le projet Supabase gratuit est mis en pause après environ 1 semaine
+#   d'inactivité : le relancer depuis le dashboard Supabase si besoin.
 # - Pas de worker de queue (QUEUE_CONNECTION=database) : les jobs (e-mails, push)
 #   s'accumulent sans être traités tant qu'aucun `php artisan queue:work` ne tourne.
 #   Un Background Worker Render n'existe pas sur le plan gratuit.
@@ -66,26 +64,20 @@ services:
 
       - key: DB_CONNECTION
         value: pgsql
+      # Base PostgreSQL hébergée sur Supabase (Session pooler, compatible IPv4).
+      # Valeurs à saisir dans le dashboard Render (Environment) :
+      #   DB_HOST=aws-1-eu-central-1.pooler.supabase.com, DB_PORT=5432,
+      #   DB_DATABASE=postgres, DB_USERNAME=postgres.<project-ref>, DB_PASSWORD=<mot de passe>.
       - key: DB_HOST
-        fromDatabase:
-          name: tchokos-db
-          property: host
+        sync: false
       - key: DB_PORT
-        fromDatabase:
-          name: tchokos-db
-          property: port
+        sync: false
       - key: DB_DATABASE
-        fromDatabase:
-          name: tchokos-db
-          property: database
+        sync: false
       - key: DB_USERNAME
-        fromDatabase:
-          name: tchokos-db
-          property: user
+        sync: false
       - key: DB_PASSWORD
-        fromDatabase:
-          name: tchokos-db
-          property: password
+        sync: false
 
       - key: SESSION_DRIVER
         value: database
@@ -178,10 +170,3 @@ services:
         sync: false
       - key: SANDBOX_PAYMENT_WEBHOOK_SECRET
         sync: false
-
-databases:
-  - name: tchokos-db
-    databaseName: tchokos
-    user: tchokos
-    plan: free # ⚠️ expire après 30 jours — voir avertissement en tête de fichier
-    region: frankfurt
